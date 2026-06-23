@@ -14,3 +14,13 @@ Documentation
 *.opensdf
 *.user
 /Project/.vs/Project/v16
+
+.vs/
+Debug/
+Release/
+x64/
+*.user
+*.suo
+*.opensdf
+*.VC.db
+*.ipch

@@ -77,6 +77,7 @@ HRESULT hr;
 vector<Vertex> Sphere;
 D3D11_BUFFER_DESC bDesc;
 D3D11_SUBRESOURCE_DATA subData;
+unsigned int sphereIndexCount = 0;
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -128,6 +129,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 	//camera.SetSpotLight(spotlightdata[2]);
 	camera.SetFOV(2.0f);
 
+	// Animation timer
+	XTime timer;
+	timer.Restart();
+
+	float orbitAngle = 0.0f;
+	float shipBobTime = 0.0f;
+
 	//main loop
 	while (true)
 	{
@@ -140,7 +148,17 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 		if (msg.message == WM_QUIT)
 			break;
 
+		timer.Signal();
+
+		float deltaTime = static_cast<float>(timer.Delta());
+
+		orbitAngle += deltaTime * 1.0f;
+		shipBobTime += deltaTime * 2.0f;
+
 		//zbuffer
+		float clearColor[4] = { 0.0f, 0.0f, 0.05f, 1.0f };
+
+		myCon->ClearRenderTargetView(myRtv, clearColor);
 		myCon->ClearDepthStencilView(zBufferView, D3D11_CLEAR_DEPTH, 1, 0);
 
 		//set skybox pipeline and draw it
@@ -239,50 +257,57 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 		//draw pyramid verts
 		//myCon->Draw(numVerts, 0);
 
-		//set stonehenge pipeline, map and unmap, draw stonhendge
-		//UINT mesh_strides[] = { sizeof(_OBJ_VERT_) };
-		//UINT mesh_offsets[] = { 0 };
-		//ID3D11Buffer* meshVB[] = { vBuffMesh };
-		//myCon->IASetVertexBuffers(0, 1, meshVB, mesh_strides, mesh_offsets);
-		//myCon->IASetIndexBuffer(iBuffMesh, DXGI_FORMAT_R32_UINT, 0);
-		//myCon->VSSetShader(vMeshShader, 0, 0);
-		//myCon->PSSetShader(pTextShader, nullptr, 0);
-		//myCon->PSSetShaderResources(0, 1, &texture);
-		////myCon->PSSetConstantBuffers(0, 1, directionallightconstant);
-		////myCon->PSSetConstantBuffers(1, 1, pointlightconstant);
-		////myCon->PSSetConstantBuffers(2, 1, spotlightconstant);
-		//myCon->PSSetSamplers(0, 1, &sampState);
-		//myCon->IASetInputLayout(vMeshLayout);
-		//temp = XMMatrixIdentity();
-		//XMStoreFloat4x4(&MyMatricies.wMatrix, temp);
-		//hr = myCon->Map(cBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
-		//*((WVP*)(gpuBuffer.pData)) = MyMatricies;
-		//myCon->Unmap(cBuff, 0);
-		//myCon->DrawIndexed(2532, 0, 0);
+		// Draw ship
+		UINT mesh_strides[] = { sizeof(_OBJ_VERT_) };
+		UINT mesh_offsets[] = { 0 };
+		ID3D11Buffer* meshVB[] = { vBuffMesh };
+
+		myCon->IASetVertexBuffers(0, 1, meshVB, mesh_strides, mesh_offsets);
+		myCon->IASetIndexBuffer(iBuffMesh, DXGI_FORMAT_R32_UINT, 0);
+
+		myCon->VSSetShader(vMeshShader, 0, 0);
+		myCon->PSSetShader(pTextShader, nullptr, 0);
+		myCon->PSSetShaderResources(0, 1, &texture);
+		myCon->PSSetSamplers(0, 1, &sampState);
+		myCon->IASetInputLayout(vMeshLayout);
+
+		float shipBob = sinf(shipBobTime) * 0.25f;
+
+		temp = XMMatrixIdentity();
+		temp = XMMatrixTranslation(3.0f, shipBob, 0.0f); // ship bobbing beside sun
+		XMStoreFloat4x4(&MyMatricies.wMatrix, temp);
+
+		hr = myCon->Map(cBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
+		*((WVP*)(gpuBuffer.pData)) = MyMatricies;
+		myCon->Unmap(cBuff, 0);
+
+		myCon->DrawIndexed(2532, 0, 0);
 
 		//asteroid
-		//UINT asteroidstrides[] = { sizeof(_OBJ_VERT_) };
-		//UINT asteroidoffsets[] = { 0 };
-		//ID3D11Buffer* asteroidmeshVB[] = { asteroidvBuffMesh };
-		//myCon->IASetVertexBuffers(0, 1, asteroidmeshVB, asteroidstrides, asteroidoffsets);
-		//myCon->IASetIndexBuffer(asteroidiBuffMesh, DXGI_FORMAT_R32_UINT, 0);
-		//myCon->VSSetShader(vMeshShader, 0, 0);
-		//myCon->PSSetShader(pTextShader, nullptr, 0);
-		//myCon->PSSetShaderResources(0, 1, &asteroidtexture);
-		//myCon->PSSetSamplers(0, 1, &sampState);
-		//myCon->IASetInputLayout(vMeshLayout);
-		//temp = XMMatrixIdentity();
-		//static float rot = 0; rot += 0.05f;
-		//temp = XMMatrixTranslation(0, 0, 0);
-		//XMMATRIX temp2 = XMMatrixRotationY(rot);
-		//temp = XMMatrixMultiply(temp2, temp);
-		//temp.r[3] = XMVectorSetX(temp.r[3], cos(rot) * 5.0f);
-		//temp.r[3] = XMVectorSetZ(temp.r[3], sin(rot) * 5.0f);
-		//XMStoreFloat4x4(&MyMatricies.wMatrix, temp);
-		//hr = myCon->Map(cBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
-		//*((WVP*)(gpuBuffer.pData)) = MyMatricies;
-		//myCon->Unmap(cBuff, 0);
-		//myCon->DrawIndexed(2616, 0, 0);
+		UINT asteroidstrides[] = { sizeof(_OBJ_VERT_) };
+		UINT asteroidoffsets[] = { 0 };
+		ID3D11Buffer* asteroidmeshVB[] = { asteroidvBuffMesh };
+		myCon->IASetVertexBuffers(0, 1, asteroidmeshVB, asteroidstrides, asteroidoffsets);
+		myCon->IASetIndexBuffer(asteroidiBuffMesh, DXGI_FORMAT_R32_UINT, 0);
+		myCon->VSSetShader(vMeshShader, 0, 0);
+		myCon->PSSetShader(pTextShader, nullptr, 0);
+		myCon->PSSetShaderResources(0, 1, &asteroidtexture);
+		myCon->PSSetSamplers(0, 1, &sampState);
+		myCon->IASetInputLayout(vMeshLayout);
+		temp = XMMatrixIdentity();
+		float orbitRadius = 5.0f;
+		float planetX = cosf(orbitAngle) * orbitRadius;
+		float planetZ = sinf(orbitAngle) * orbitRadius;
+
+		temp =
+			XMMatrixScaling(0.5f, 0.5f, 0.5f) *
+			XMMatrixRotationY(orbitAngle) *
+			XMMatrixTranslation(planetX, 0.0f, planetZ);
+		XMStoreFloat4x4(&MyMatricies.wMatrix, temp);
+		hr = myCon->Map(cBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
+		*((WVP*)(gpuBuffer.pData)) = MyMatricies;
+		myCon->Unmap(cBuff, 0);
+		myCon->DrawIndexed(2616, 0, 0);
 
 		//sphere
 		UINT spherestrides[] = { sizeof(Vertex) };
@@ -301,7 +326,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 		hr = myCon->Map(cBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
 		*((WVP*)(gpuBuffer.pData)) = MyMatricies;
 		myCon->Unmap(cBuff, 0);
-		myCon->Draw(Sphere.size(), 0);
+		myCon->DrawIndexed(sphereIndexCount, 0, 0);
 
 		mySwap->Present(1, 0);
 	}
@@ -757,8 +782,29 @@ bool LoadOBJ(const char* path, vector<Vertex>& OutVector)
 		}
 	}
 
-	bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-	bDesc.ByteWidth = sizeof(Vertex) * Sphere.size();
-	subData.pSysMem = IL.data();
-	hr = myDev->CreateBuffer(&bDesc, &subData, &sphereiBuffMesh);
+	if (!IL.empty())
+	{
+		ZeroMemory(&bDesc, sizeof(bDesc));
+		ZeroMemory(&subData, sizeof(subData));
+
+		bDesc.Usage = D3D11_USAGE_IMMUTABLE;
+		bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+		bDesc.ByteWidth = sizeof(unsigned int) * IL.size();
+
+		subData.pSysMem = IL.data();
+		sphereIndexCount = static_cast<unsigned int>(IL.size());
+
+		hr = myDev->CreateBuffer(&bDesc, &subData, &sphereiBuffMesh);
+
+		if (FAILED(hr))
+		{
+			return false;
+		}
+	}
+	else
+	{
+		return false;
+	}
+
+	return true;
 }
