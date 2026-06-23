@@ -87,6 +87,89 @@ INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 void CleanUp();
 bool LoadOBJ(const char* path, vector<Vertex>& OutVector);
 
+void DrawShip(float shipX, float shipY, float shipZ)
+{
+	UINT mesh_strides[] = { sizeof(_OBJ_VERT_) };
+	UINT mesh_offsets[] = { 0 };
+	ID3D11Buffer* meshVB[] = { vBuffMesh };
+
+	myCon->IASetVertexBuffers(0, 1, meshVB, mesh_strides, mesh_offsets);
+	myCon->IASetIndexBuffer(iBuffMesh, DXGI_FORMAT_R32_UINT, 0);
+
+	myCon->VSSetShader(vMeshShader, 0, 0);
+	myCon->PSSetShader(pTextShader, nullptr, 0);
+	myCon->PSSetShaderResources(0, 1, &texture);
+	myCon->PSSetSamplers(0, 1, &sampState);
+	myCon->IASetInputLayout(vMeshLayout);
+
+	XMMATRIX temp =
+		XMMatrixScaling(0.5f, 0.5f, 0.5f) *
+		XMMatrixTranslation(shipX, shipY, shipZ);
+
+	XMStoreFloat4x4(&MyMatricies.wMatrix, temp);
+
+	D3D11_MAPPED_SUBRESOURCE gpuBuffer;
+	hr = myCon->Map(cBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
+	*((WVP*)(gpuBuffer.pData)) = MyMatricies;
+	myCon->Unmap(cBuff, 0);
+
+	myCon->DrawIndexed(2532, 0, 0);
+}
+void DrawPlanet(float planetX, float planetZ, float orbitAngle)
+{
+	UINT asteroidstrides[] = { sizeof(_OBJ_VERT_) };
+	UINT asteroidoffsets[] = { 0 };
+	ID3D11Buffer* asteroidmeshVB[] = { asteroidvBuffMesh };
+
+	myCon->IASetVertexBuffers(0, 1, asteroidmeshVB, asteroidstrides, asteroidoffsets);
+	myCon->IASetIndexBuffer(asteroidiBuffMesh, DXGI_FORMAT_R32_UINT, 0);
+
+	myCon->VSSetShader(vMeshShader, 0, 0);
+	myCon->PSSetShader(pTextShader, nullptr, 0);
+	myCon->PSSetShaderResources(0, 1, &asteroidtexture);
+	myCon->PSSetSamplers(0, 1, &sampState);
+	myCon->IASetInputLayout(vMeshLayout);
+
+	XMMATRIX temp =
+		XMMatrixScaling(0.5f, 0.5f, 0.5f) *
+		XMMatrixRotationY(orbitAngle) *
+		XMMatrixTranslation(planetX, 0.0f, planetZ);
+
+	XMStoreFloat4x4(&MyMatricies.wMatrix, temp);
+
+	D3D11_MAPPED_SUBRESOURCE gpuBuffer;
+	hr = myCon->Map(cBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
+	*((WVP*)(gpuBuffer.pData)) = MyMatricies;
+	myCon->Unmap(cBuff, 0);
+
+	myCon->DrawIndexed(2616, 0, 0);
+}
+void DrawSun()
+{
+	UINT spherestrides[] = { sizeof(Vertex) };
+	UINT sphereoffsets[] = { 0 };
+	ID3D11Buffer* spheremeshVB[] = { spherevBuffMesh };
+
+	myCon->IASetVertexBuffers(0, 1, spheremeshVB, spherestrides, sphereoffsets);
+	myCon->IASetIndexBuffer(sphereiBuffMesh, DXGI_FORMAT_R32_UINT, 0);
+
+	myCon->VSSetShader(vMeshShader, 0, 0);
+	myCon->PSSetShader(EmissivePS, nullptr, 0);
+	myCon->PSSetShaderResources(0, 1, &spheretexture);
+	myCon->PSSetSamplers(0, 1, &sampState);
+	myCon->IASetInputLayout(vMeshLayout);
+
+	XMMATRIX temp = XMMatrixTranslation(0.0f, 0.0f, 0.0f);
+	XMStoreFloat4x4(&MyMatricies.wMatrix, temp);
+
+	D3D11_MAPPED_SUBRESOURCE gpuBuffer;
+	hr = myCon->Map(cBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
+	*((WVP*)(gpuBuffer.pData)) = MyMatricies;
+	myCon->Unmap(cBuff, 0);
+
+	myCon->DrawIndexed(sphereIndexCount, 0, 0);
+}
+
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR lpCmdLine, _In_ int nCmdShow)
 {
 	UNREFERENCED_PARAMETER(hPrevInstance);
@@ -257,76 +340,24 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 		//draw pyramid verts
 		//myCon->Draw(numVerts, 0);
 
-		// Draw ship
-		UINT mesh_strides[] = { sizeof(_OBJ_VERT_) };
-		UINT mesh_offsets[] = { 0 };
-		ID3D11Buffer* meshVB[] = { vBuffMesh };
-
-		myCon->IASetVertexBuffers(0, 1, meshVB, mesh_strides, mesh_offsets);
-		myCon->IASetIndexBuffer(iBuffMesh, DXGI_FORMAT_R32_UINT, 0);
-
-		myCon->VSSetShader(vMeshShader, 0, 0);
-		myCon->PSSetShader(pTextShader, nullptr, 0);
-		myCon->PSSetShaderResources(0, 1, &texture);
-		myCon->PSSetSamplers(0, 1, &sampState);
-		myCon->IASetInputLayout(vMeshLayout);
-
-		float shipBob = sinf(shipBobTime) * 0.25f;
-
-		temp = XMMatrixIdentity();
-		temp = XMMatrixTranslation(3.0f, shipBob, 0.0f); // ship bobbing beside sun
-		XMStoreFloat4x4(&MyMatricies.wMatrix, temp);
-
-		hr = myCon->Map(cBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
-		*((WVP*)(gpuBuffer.pData)) = MyMatricies;
-		myCon->Unmap(cBuff, 0);
-
-		myCon->DrawIndexed(2532, 0, 0);
-
-		//asteroid
-		UINT asteroidstrides[] = { sizeof(_OBJ_VERT_) };
-		UINT asteroidoffsets[] = { 0 };
-		ID3D11Buffer* asteroidmeshVB[] = { asteroidvBuffMesh };
-		myCon->IASetVertexBuffers(0, 1, asteroidmeshVB, asteroidstrides, asteroidoffsets);
-		myCon->IASetIndexBuffer(asteroidiBuffMesh, DXGI_FORMAT_R32_UINT, 0);
-		myCon->VSSetShader(vMeshShader, 0, 0);
-		myCon->PSSetShader(pTextShader, nullptr, 0);
-		myCon->PSSetShaderResources(0, 1, &asteroidtexture);
-		myCon->PSSetSamplers(0, 1, &sampState);
-		myCon->IASetInputLayout(vMeshLayout);
-		temp = XMMatrixIdentity();
+		//Planet
 		float orbitRadius = 5.0f;
 		float planetX = cosf(orbitAngle) * orbitRadius;
 		float planetZ = sinf(orbitAngle) * orbitRadius;
 
-		temp =
-			XMMatrixScaling(0.5f, 0.5f, 0.5f) *
-			XMMatrixRotationY(orbitAngle) *
-			XMMatrixTranslation(planetX, 0.0f, planetZ);
-		XMStoreFloat4x4(&MyMatricies.wMatrix, temp);
-		hr = myCon->Map(cBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
-		*((WVP*)(gpuBuffer.pData)) = MyMatricies;
-		myCon->Unmap(cBuff, 0);
-		myCon->DrawIndexed(2616, 0, 0);
+		DrawPlanet(planetX, planetZ, orbitAngle);
 
-		//sphere
-		UINT spherestrides[] = { sizeof(Vertex) };
-		UINT spheredoffsets[] = { 0 };
-		ID3D11Buffer* spheremeshVB[] = { spherevBuffMesh };
-		myCon->IASetVertexBuffers(0, 1, spheremeshVB, spherestrides, spheredoffsets);
-		myCon->IASetIndexBuffer(sphereiBuffMesh, DXGI_FORMAT_R32_UINT, 0);
-		myCon->VSSetShader(vMeshShader, 0, 0);
-		myCon->PSSetShader(EmissivePS, nullptr, 0);
-		myCon->PSSetShaderResources(0, 1, &spheretexture);
-		myCon->PSSetSamplers(0, 1, &sampState);
-		myCon->IASetInputLayout(vMeshLayout);
-		temp = XMMatrixIdentity();
-		temp = XMMatrixTranslation(0, 0, 0);
-		XMStoreFloat4x4(&MyMatricies.wMatrix, temp);
-		hr = myCon->Map(cBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
-		*((WVP*)(gpuBuffer.pData)) = MyMatricies;
-		myCon->Unmap(cBuff, 0);
-		myCon->DrawIndexed(sphereIndexCount, 0, 0);
+		//Ship
+		float shipBob = sinf(shipBobTime) * 0.25f;
+
+		float shipOffsetDistance = 1.5f;
+		float shipX = planetX + cosf(orbitAngle + 1.57f) * shipOffsetDistance;
+		float shipZ = planetZ + sinf(orbitAngle + 1.57f) * shipOffsetDistance;
+
+		DrawShip(shipX, shipBob, shipZ);
+
+		//Sun
+		DrawSun();
 
 		mySwap->Present(1, 0);
 	}
